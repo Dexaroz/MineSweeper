@@ -1,4 +1,4 @@
-package software.ulpgc.model;
+package software.ulpgc.arquitecture.model;
 
 public enum Difficulty {
 

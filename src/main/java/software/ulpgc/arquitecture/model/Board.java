@@ -1,31 +1,39 @@
-package software.ulpgc.model;
+package software.ulpgc.arquitecture.model;
 
+import software.ulpgc.arquitecture.control.Observer;
+
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 public class Board {
     private final int rows;
     private final int columns;
     private final int mineCount;
-    private final int revealedCells;
+    private final List<Observer> observers = new ArrayList<>();
     private final Cell[][] cells;
 
     public Board(int rows, int columns, int mineCount) {
         this.rows = rows;
         this.columns = columns;
         this.mineCount = mineCount;
-        this.revealedCells = 0;
         this.cells = new Cell[rows][columns];
     }
 
-    public Board(int rows, int columns, int mineCount, Cell[][] cells, int revealedCells) {
+    public Board(int rows, int columns, int mineCount, Cell[][] cells) {
         this.rows = rows;
         this.columns = columns;
         this.mineCount = mineCount;
-        this.revealedCells = revealedCells;
         this.cells = cells;
+    }
 
-        if (hasYouWin()){
-            System.out.println("FELICIDADES JEFE");
+    public void addObserver(Observer observer){
+        observers.add(observer);
+    }
+
+    public void notifyObservers(Cell cell){
+        for (Observer observer : observers){
+            observer.update(cell);
         }
     }
 
@@ -56,21 +64,16 @@ public class Board {
         return this;
     }
 
-    public Board revealCell(int row, int col){
+    public void revealCell(int row, int col){
         Cell cell = cells[row][col];
-
-        if (!hasYouLost(cell)){
+        if (!cell.isRevealed()){
             cells[row][col] = new Cell(cell.hasMine(), false, true, countAdjacentMines(row, col));
-            int revealedCount = 1;
-
-            if (countAdjacentMines(row, col) == 0){
-                revealedCount = revealAdjacentCells(row, col, revealedCount);
-            }
-
-            return new Board(this.rows, this.columns, this.mineCount, this.cells, revealedCells + revealedCount);
+            notifyObservers(cell);
         }
 
-        return this;
+        if (countAdjacentMines(row, col) == 0){
+            revealAdjacentCells(row, col);
+        }
     }
 
     public void toggleFlag(int row, int col){
@@ -95,46 +98,41 @@ public class Board {
         return mines;
     }
 
-    private boolean hasYouLost(Cell cell){
-        if (cell.hasMine()){
-            System.out.println("PERDISTE JEFE");
-            return true;
-        }
-        return false;
-    }
-
-    private boolean hasYouWin(){
-        int totalCell = rows * columns;
-        return revealedCells == totalCell - mineCount;
-    }
-
-    private int revealAdjacentCells(int row, int col, int revealedCount) {
+    private void revealAdjacentCells(int row, int col) {
         for (int i = row - 1; i <= row; i++) {
             for (int j = col - 1; j <= col; j++) {
-                revealedCount = getRevealedCount(revealedCount, i, j);
+                getRevealedCount(i, j);
             }
         }
-        return revealedCount;
     }
 
-    private int getRevealedCount(int revealedCount, int i, int j) {
+    private void getRevealedCount(int i, int j) {
         if (i >= 0 && i < rows && j >= 0 && j < columns) {
             Cell adjacentCell = cells[i][j];
-            revealedCount = getRevealedCount(revealedCount, i, j, adjacentCell);
+            getRevealedCount(i, j, adjacentCell);
         }
-        return revealedCount;
     }
 
-    private int getRevealedCount(int revealedCount, int i, int j, Cell adjacentCell) {
+    private void getRevealedCount(int i, int j, Cell adjacentCell) {
         if (!adjacentCell.isRevealed() && !adjacentCell.isFlagged()) {
             int adjacentMines = countAdjacentMines(i, j);
             cells[i][j] = new Cell(false, false, true, adjacentMines);
-            revealedCount++;
 
             if (adjacentMines == 0) {
-                revealedCount = revealAdjacentCells(i, j, revealedCount);
+                revealAdjacentCells(i, j);
             }
         }
-        return revealedCount;
+    }
+
+    public int getRows() {
+        return rows;
+    }
+
+    public int getColumns() {
+        return columns;
+    }
+
+    public int getMineCount() {
+        return mineCount;
     }
 }
